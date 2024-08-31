@@ -1,0 +1,68 @@
+import gradio as gr
+from cryptography.fernet import Fernet
+import os
+from tqdm import tqdm
+
+def encrypt_file_main(key_file, file_to_encrypt):
+    # Hardcoded save directory
+    save_dir = "/content/encrypted_files"  # Yahan par aap apna desired directory path specify karein
+
+    # Check if the key file exists
+    if not os.path.exists(key_file):
+        return "Error: Specified key file does not exist. Please provide a valid key file."
+
+    # Read the key from the file
+    with open(key_file, 'rb') as key_file:
+        key = key_file.read()
+
+    # Using the provided key
+    fernet = Fernet(key)
+
+    # Check if the file to encrypt exists
+    if not os.path.exists(file_to_encrypt):
+        return "Error: Specified file does not exist. Please provide a valid file to encrypt."
+
+    # Opening the original file to encrypt
+    with open(file_to_encrypt, 'rb') as file:
+        original = file.read()
+
+    # Encrypting the file
+    encrypted = fernet.encrypt(original)
+
+    # Check if the save directory exists
+    if not os.path.exists(save_dir):
+        return "Error: Specified save directory does not exist. Please provide a valid directory."
+
+    # Construct the full file path for the encrypted file
+    encrypted_file_path = os.path.join(save_dir, os.path.basename(file_to_encrypt) + '.encrypted')
+
+    # Writing the encrypted data to the encrypted file with progress bar
+    with open(encrypted_file_path, 'wb') as encrypted_file:
+        # Create tqdm instance with total size of encrypted data
+        progress_bar = tqdm(total=len(encrypted), unit='B', unit_scale=True, desc='Encrypting', dynamic_ncols=True)
+        # Write data chunk by chunk with updating the progress bar
+        for chunk in range(0, len(encrypted), 1024):
+            encrypted_file.write(encrypted[chunk:chunk + 1024])
+            progress_bar.update(1024)
+        progress_bar.close()
+
+    return encrypted_file_path  # Return the path to the encrypted file
+
+def gradio_interface(key_file, file_to_encrypt):
+    encrypted_file_path = encrypt_file_main(key_file, file_to_encrypt)
+    if "Error" in encrypted_file_path:
+        return encrypted_file_path
+    else:
+        return encrypted_file_path
+
+# Create the Gradio interface
+interface = gr.Interface(
+    fn=gradio_interface,
+    inputs=[
+        gr.File(label="Upload Key File"),
+        gr.File(label="Upload File to Encrypt"),
+    ],
+    outputs=gr.File(label="Download Encrypted File")
+)
+
+interface.launch()

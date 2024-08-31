@@ -1,0 +1,33 @@
+from cryptography.fernet import Fernet
+import gradio as gr
+import os
+
+# Define a fixed directory path
+key_directory = "/content/key"
+
+def generate_key(filename):
+    try:
+        # Generate a new Fernet key
+        key = Fernet.generate_key()
+
+        # Construct the full file path
+        key_path = os.path.join(key_directory, filename)
+
+        # Storing the key in a file
+        with open(key_path, 'wb') as filekey:
+            filekey.write(key)
+
+        return key_path
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# Gradio Interface
+interface = gr.Interface(
+    fn=generate_key,
+    inputs=gr.Textbox(label="Enter Filename"),
+    outputs=gr.File(label="Download Key File"),
+    title="Generate and Download Encryption Key"
+)
+
+interface.launch()

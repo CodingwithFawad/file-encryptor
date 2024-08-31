@@ -1,0 +1,54 @@
+import gradio as gr
+from cryptography.fernet import Fernet
+import os
+
+save_dir = "/content/fawad"
+
+def decrypt_file_main(key_file, encrypted_file, output_extension=".txt"):
+    try:
+        # Read the key file
+        with open(key_file.name, 'rb') as key:
+            key_data = key.read()
+        
+        fernet = Fernet(key_data)
+        
+        # Read the encrypted file
+        with open(encrypted_file.name, 'rb') as enc_file:
+            encrypted_data = enc_file.read()
+        
+        decrypted_data = fernet.decrypt(encrypted_data)
+
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        # Extract the original file name and extension from the encrypted file name
+        base_name, file_extension = os.path.splitext(encrypted_file.name)
+        
+        # Remove any encryption-related extensions (e.g., '.enc', '.cryptography')
+        encryption_extensions = ['.enc', '.cryptography']
+        for ext in encryption_extensions:
+            if base_name.endswith(ext):
+                base_name = base_name[: -len(ext)]
+
+        # Construct the path for the decrypted file with the specified output extension
+        decrypted_file_path = os.path.join(save_dir, base_name + output_extension)
+        
+        # Write the decrypted file
+        with open(decrypted_file_path, 'wb') as decrypted_file:
+            decrypted_file.write(decrypted_data)
+        
+        return decrypted_file_path
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+interface = gr.Interface(
+    fn=decrypt_file_main,
+    inputs=[
+        gr.File(label="Upload Key File"),
+        gr.File(label="Upload Encrypted File to Decrypt"),
+        gr.Textbox(value=".txt", label="Output File Extension", placeholder=".txt")  # Input for output extension
+    ],
+    outputs=gr.File(label="Download Decrypted File")
+)
+
+interface.launch(debug=True)
